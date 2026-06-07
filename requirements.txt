@@ -1,0 +1,19 @@
+# Core ML/Data dependencies (Osoba 1: s28496)
+torch>=2.0.0
+transformers>=4.30.0
+Pillow>=10.0.0
+
+# Backend dependencies (Osoba 2: s27507)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+gTTS>=2.3.0
+python-multipart>=0.0.6
+
+# Frontend dependencies (Osoba 3: s26746)
+streamlit>=1.25.0
+requests>=2.31.0
+
+# Dev / Quality
+pytest>=7.4.0
+pylint>=2.17.0
+black>=23.0.0
