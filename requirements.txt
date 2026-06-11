@@ -9,10 +9,6 @@ uvicorn>=0.23.0
 gTTS>=2.3.0
 python-multipart>=0.0.6
 
-# Frontend dependencies (Osoba 3: s26746)
-streamlit>=1.25.0
-requests>=2.31.0
-
 # Dev / Quality
 pytest>=7.4.0
 pylint>=2.17.0

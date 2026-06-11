@@ -13,8 +13,11 @@ Interactive Swagger documentation is available at ``/docs`` and ReDoc at
 
 from io import BytesIO
 
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 from gtts import gTTS
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
@@ -22,6 +25,8 @@ from pydantic import BaseModel
 from model.captioner import ImageCaptioner
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png"}
+STATIC_DIR = Path(__file__).parent / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
 
 app = FastAPI(
     title="VisionTalk API",
@@ -32,6 +37,8 @@ app = FastAPI(
     ),
     version="1.0.0",
 )
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Single shared model instance. It is loaded lazily on the first /predict
 # call so that the server (and Swagger UI) start instantly without having to
@@ -56,6 +63,12 @@ class CaptionResponse(BaseModel):
     """Response model for the prediction endpoint."""
 
     caption: str
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Serve the single-page frontend."""
+    return FileResponse(INDEX_FILE)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["status"])

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionTalk</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="page_shell">
+        <section class="hero_panel">
+            <p class="eyebrow">VisionTalk</p>
+            <h1>Opis obrazu i odczyt audio</h1>
+            <p class="hero_copy">
+                Wgraj plik JPG lub PNG, wygeneruj opis i odtwórz go bez
+                przełączania się między narzędziami.
+            </p>
+        </section>
+
+        <section class="workspace_panel" aria-label="Generator opisu obrazu">
+            <form class="upload_form" id="upload_form">
+                <label class="file_picker" for="image_file">
+                    <span>Wybierz obraz</span>
+                    <input
+                        id="image_file"
+                        name="image_file"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                        required
+                    >
+                </label>
+
+                <div class="preview_card" id="preview_card" hidden>
+                    <img
+                        id="image_preview"
+                        class="image_preview"
+                        alt="Podgląd wybranego obrazu"
+                    >
+                </div>
+
+                <div class="actions">
+                    <button id="generate_button" type="submit">
+                        Generuj opis
+                    </button>
+                    <button id="speak_button" type="button" hidden>
+                        Odczytaj opis
+                    </button>
+                </div>
+            </form>
+
+            <section class="feedback_panel" aria-live="polite" aria-atomic="true">
+                <div class="loader" id="loader" hidden>
+                    <span class="loader_dot"></span>
+                    <span>Trwa analiza obrazu...</span>
+                </div>
+                <p class="error_message" id="error_message" hidden></p>
+                <div class="caption_card">
+                    <p class="caption_label">Wygenerowany opis</p>
+                    <p class="caption_text" id="caption_text">
+                        Tutaj pojawi się wynik po wysłaniu obrazu.
+                    </p>
+                </div>
+                <audio id="audio_player" class="audio_player" controls hidden></audio>
+            </section>
+        </section>
+    </main>
+
+    <script src="/static/main.js" defer></script>
+</body>
+</html>

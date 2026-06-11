@@ -48,9 +48,12 @@ class ImageCaptioner:
         result = self._captioner(image)
 
         if isinstance(result, list) and len(result) > 0:
-            return result[0].get("generated_text", "").strip()
+            first_result = result[0]
+            if "generated_text" not in first_result:
+                raise KeyError("Missing 'generated_text' in model response.")
+            return first_result["generated_text"].strip()
 
-        return ""
+        raise ValueError("Model returned an empty response.")
 
     def is_loaded(self) -> bool:
         """Return whether the model pipeline has been loaded."""
