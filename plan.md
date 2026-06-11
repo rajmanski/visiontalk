@@ -15,10 +15,10 @@ Projekt realizowany jest przez 3 osoby: **s28496**, **s27507**, **s26746**.
 | Język | Python 3.9+ | Wymagany w projekcie, łatwa integracja ML |
 | Model ML | Transformers (HuggingFace) + PyTorch | Obsługa gotowego modelu ViT-GPT2 |
 | Backend | FastAPI | Lekki, szybki, idealny do API obsługującego pliki |
-| Frontend | Streamlit | Zgodnie z propozycją, szybkie UI z `st.camera_input`, `st.audio` |
+| Frontend | HTML + CSS + JavaScript serwowane przez FastAPI | Jeden spójny serwer aplikacji bez dokładania osobnego kontenera dla warstwy UI |
 | Preprocessing obrazów | Pillow | Standardowa obróbka obrazów przed modelem |
 | TTS (mowa) | gTTS | Proste generowanie plików MP3 z tekstu angielskiego |
-| Konteneryzacja | Docker + Docker Compose | Spełnia wymóg przenoszalności i dwóch kontenerów (BE + FE). `docker compose up` uruchamia całość |
+| Konteneryzacja | Docker + Docker Compose | Proste uruchamianie całej aplikacji jednym poleceniem, bez mnożenia usług |
 | Jakość kodu | pylint, pytest, black | Spełnienie wymogu ≥ 8 pkt w pylint i czystego kodu (PEP8) |
 | Kontrola wersji | Git + GitHub | Wymagane w kryteriach |
 
@@ -31,7 +31,7 @@ Projekt realizowany jest przez 3 osoby: **s28496**, **s27507**, **s26746**.
 ### Dlaczego to ważne?
 - Osoba 1 potrzebuje bibliotek do modelu ML (np. `torch`, `transformers`).
 - Osoba 2 potrzebuje `fastapi`, `uvicorn`.
-- Osoba 3 potrzebuje `streamlit`.
+- Osoba 3 odpowiada za frontend webowy i konfigurację uruchomieniową aplikacji.
 
 Jeśli wszyscy zainstalują wszystko na „pańskim” (systemowym) Pythonie, mogą sobie nawzajem psuć ustawienia. `venv` rozwiązuje ten problem — każdy ma swoje własne pudełko.
 
@@ -47,15 +47,15 @@ Jeśli wszyscy zainstalują wszystko na „pańskim” (systemowym) Pythonie, mo
    - Windows: `venv\Scripts\activate`
    - Linux/Mac: `source venv/bin/activate`
 
-3. **Instalujesz biblioteki** z listy, którą przygotuje Osoba 3 w pliku `requirements.txt`:
+3. **Instalujesz biblioteki** z listy projektowej:
    ```bash
-   pip install -r requirements.txt
+   uv pip install -r requirements.txt
    ```
 
 4. **Pracujesz i testujesz** w tym środowisku.
 
 ### A co z Dockerem?
-Kontenery Dockera **nie potrzebują** `venv`, ponieważ sam kontener jest już izolowany. W kontenerze instalujesz biblioteki bezpośrednio przez `pip install` w `Dockerfile`. Plik `requirements.txt` jest wtedy używany przez Dockera jako „lista zakupów” do zbudowania obrazu.
+Kontenery Dockera **nie potrzebują** `venv`, ponieważ sam kontener jest już izolowany. W kontenerze instalujesz biblioteki bezpośrednio z plików projektu. W tym projekcie jeden kontener FastAPI może serwować zarówno API, jak i pliki frontendu.
 
 ---
 
@@ -64,7 +64,7 @@ Kontenery Dockera **nie potrzebują** `venv`, ponieważ sam kontener jest już i
 ```
 visiontalk/
 ├── README.md                 # Opis, instrukcja uruchomienia, format danych
-├── docker-compose.yml        # Orchestracja BE + FE
+├── docker-compose.yml        # Uruchomienie całej aplikacji
 ├── requirements.txt          # Wspólne zależności (lub requirements.yaml)
 ├── .github/
 │   └── workflows/            # (opcjonalnie) CI do pylint/pytest
@@ -78,17 +78,17 @@ visiontalk/
 │   ├── captioner.py          # Wrapper na ViT-GPT2 (load, predict)
 │   └── evaluator.py          # Ewaluacja skuteczności na /test_images
 ├── app/
-│   ├── backend/
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   ├── main.py           # FastAPI: endpointy /predict, /tts, /health
-│   │   └── api/
-│   │       └── v1/
-│   │           └── endpoints.py
-│   └── frontend/
+│   └── backend/
 │       ├── Dockerfile
 │       ├── requirements.txt
-│       └── streamlit_app.py  # UI: upload, kamera, duża czcionka, audio
+│       ├── main.py           # FastAPI: API + serwowanie frontendu
+│       ├── api/
+│       │   └── v1/
+│       │       └── endpoints.py
+│       └── static/
+│           ├── index.html    # UI: upload obrazu, wynik, odtwarzanie audio
+│           ├── styles.css    # Kontrastowy, prosty interfejs
+│           └── main.js       # Wywołania API `/predict` i `/tts`
 └── tests/
     ├── test_data.py
     ├── test_model.py
@@ -103,7 +103,7 @@ visiontalk/
 
 1. Utworzenie repozytorium na GitHub, dodanie kolaboratorów.
 2. Ustalenie struktury katalogów (`data/`, `model/`, `app/`, `tests/`).
-3. Przygotowanie wstępnych `Dockerfile` (BE i FE) oraz `docker-compose.yml`.
+3. Przygotowanie `Dockerfile` aplikacji oraz `docker-compose.yml`.
 4. Szkielet `README.md` z opisem projektu i wstępną instrukcją uruchomienia.
 
 ### Etap 2: Moduł `data` (Tydzień 1–2)
@@ -127,21 +127,21 @@ visiontalk/
 3. Integracja z modułem `model` (backend importuje i używa klasy z `model/captioner.py`).
 4. Endpoint `/tts`: przyjmuje tekst, zwraca plik audio MP3 (np. za pomocą `gTTS`).
 5. Endpoint `/health` do sprawdzania statusu.
-6. Dockerfile dla backendu + testy API (`pytest`).
+6. Serwowanie plików statycznych frontendu z FastAPI, Dockerfile aplikacji + testy API (`pytest`).
 
-### Etap 5: Frontend (`app/frontend`) (Tydzień 3)
+### Etap 5: Frontend w FastAPI (`app/backend/static`) (Tydzień 3)
 
-1. Aplikacja Streamlit (`streamlit_app.py`).
-2. Upload obrazu (`st.file_uploader`) oraz obsługa kamery (`st.camera_input`).
-3. Komunikacja z backendem (HTTP POST do `/predict` i `/tts`).
-4. Wyświetlenie wyniku w **dużej czcionce** z **wysokim kontrastem** (dostosowanie CSS Streamlit lub użycie `st.markdown` z inline styles).
-5. Odtwarzanie wygenerowanego audio (`st.audio`).
-6. Responsywność – Streamlit domyślnie jest responsywny, ale wymaga przetestowania na telefonie.
-7. Dockerfile dla frontendu.
+1. Statyczna aplikacja webowa (`index.html`, `styles.css`, `main.js`) trzymana w repo obok backendu.
+2. Upload obrazu i jego podgląd po stronie przeglądarki.
+3. Komunikacja z backendem (`POST /predict`, `GET /tts`).
+4. Wyświetlenie wyniku w **dużej czcionce** z **wysokim kontrastem**.
+5. Odtwarzanie wygenerowanego audio w przeglądarce.
+6. Responsywność i podstawowa dostępność interfejsu.
+7. Podpięcie plików statycznych do FastAPI.
 
 ### Etap 6: Integracja i przenoszalność (Tydzień 3–4)
 
-1. Połączenie kontenerów przez `docker-compose.yml` (networking BE ↔ FE).
+1. Przygotowanie `docker-compose.yml`, które uruchamia jeden serwis aplikacji FastAPI.
 2. Upewnienie się, że **całość uruchamia się jednym poleceniem** (`docker compose up --build`) bez ręcznej konfiguracji OS.
 3. Automatyczne pobieranie modelu przy pierwszym starcie (np. w entrypoint lub `Dockerfile`).
 4. Uruchomienie `pylint` na całym projekcie i poprawki do osiągnięcia ≥ 8 pkt.
@@ -185,7 +185,7 @@ visiontalk/
 | 2.2 | **Struktura `app/backend/`** | Utworzyć foldery: `app/backend/`, `app/backend/api/v1/`; w każdym dodać `__init__.py`; utworzyć plik `app/backend/main.py`. |
 | 2.3 | **Endpoint `/health`** | W `main.py` utworzyć aplikację FastAPI (`app = FastAPI()`); dodać dekorator `@app.get("/health")`; funkcja zwraca `{"status": "ok"}`. Uruchomić lokalnie: `uvicorn main:app --reload`; wejść w przeglądarkę na `http://localhost:8000/health` i sprawdzić czy widzi JSON. |
 | 2.4 | **Endpoint `/predict`** | Dodać endpoint `@app.post("/predict")` przyjmujący plik (`file: UploadFile = File(...)`); w funkcji: przeczytać plik, przekonwertować na obraz PIL (`Image.open(BytesIO(...))`), wywołać klasę `ImageCaptioner` (z modułu `model/`) aby uzyskać opis, zwrócić JSON `{"caption": "..."}`. Dodać obsługę błędów (np. zły format pliku → 400 Bad Request). |
-| 2.5 | **Endpoint `/tts`** | Dodać endpoint `@app.post("/tts")` przyjmujący tekst (`text: str = Form(...)`); w funkcji: wygenerować plik MP3 za pomocą `gTTS(text=text, lang='en')`, zapisać tymczasowo (np. w `/tmp/` lub `tempfile`), zwrócić plik jako `FileResponse` (lub jego zawartość binarną). |
+| 2.5 | **Endpoint `/tts`** | Dodać endpoint `@app.get("/tts")` przyjmujący tekst jako query parameter (`text: str = Query(...)`); w funkcji wygenerować plik MP3 za pomocą `gTTS(text=text, lang='en')` i zwrócić jego zawartość binarną z poprawnym `media_type="audio/mpeg"`. |
 | 2.6 | **Integracja z modelem** | W `main.py` (lub osobnym module) zaimportować `ImageCaptioner` z `model.captioner`; utworzyć instancję globalną przy starcie aplikacji (`captioner = ImageCaptioner(); captioner.load()`), aby model nie ładował się przy każdym zapytaniu. |
 | 2.7 | **Dockerfile dla BE** | Utworzyć plik `app/backend/Dockerfile` z zawartością: obraz bazowy `FROM python:3.9-slim`, skopiować `requirements.txt`, zainstalować zależności (`pip install -r requirements.txt`), skopiować cały kod, wystawić port `EXPOSE 8000`, komenda startowa `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]`. |
 | 2.8 | **Testy API** | W `tests/test_api.py` użyć `from fastapi.testclient import TestClient`; napisać testy: `test_health` (sprawdza `/health`), `test_predict` (wysyła prawdziwy obraz testowy i sprawdza czy odpowiedź zawiera pole `caption`), `test_tts` (wysyła tekst i sprawdza czy odpowiedź ma nagłówek `audio/mpeg`). Uruchomić `pytest tests/test_api.py`. |
@@ -195,21 +195,22 @@ visiontalk/
 
 ### Osoba 3: Frontend Engineer & DevOps (s26746)
 
-**Cel**: Zbudować frontend Streamlit, skonfigurować Docker Compose i napisać dokumentację.
+**Cel**: Zbudować frontend webowy serwowany przez FastAPI, spiąć go z istniejącym API i dopracować sposób uruchamiania projektu.
 
 | # | Task | Szczegóły / Kroki do wykonania |
 |---|------|--------------------------------|
-| 3.1 | **Setup venv i repozytorium** | Sklonować repo; terminal w katalogu projektu; `python -m venv venv`; aktywować; `pip install streamlit requests pytest`; sprawdzić: `streamlit hello` (otwiera przeglądarkę z demo). |
-| 3.2 | **Struktura `app/frontend/`** | Utworzyć folder `app/frontend/`; wewnątrz plik `streamlit_app.py`. |
-| 3.3 | **UI – Upload obrazu** | W `streamlit_app.py`: `import streamlit as st`; dodać `st.title("VisionTalk")`; dodać `uploaded_file = st.file_uploader("Wybierz obraz...", type=["jpg", "jpeg", "png"])`; sprawdzić czy plik nie jest `None`; wyświetlić podgląd: `st.image(uploaded_file, caption="Przesłany obraz")`. |
-| 3.4 | **UI – Kamera** | Poniżej uploadu dodać: `camera_image = st.camera_input("Zrób zdjęcie")`; jeśli użytkownik zrobi zdjęcie, traktować `camera_image` tak samo jak `uploaded_file` (przesłać do backendu). |
-| 3.5 | **UI – Dostępność** | Użyć `st.markdown()` z HTML/CSS, aby ustawić dużą czcionkę dla wyników: np. `st.markdown("<h1 style='font-size: 3em;'>{{ caption }}</h1>", unsafe_allow_html=True)`. Ustawić ciemne tło i jasny tekst przez `st.set_page_config(page_title="VisionTalk", layout="centered", initial_sidebar_state="collapsed")`. |
-| 3.6 | **Komunikacja z BE** | Napisać funkcję `send_to_backend(image_bytes)` która: używa `requests.post("http://backend:8000/predict", files={"file": image_bytes})`, odbiera JSON, zwraca `caption`. Przycisk `st.button("Generuj opis")` wywołuje tę funkcję i wyświetla wynik. |
-| 3.7 | **UI – Audio / TTS** | Pod wyświetlonym opisem dodać przycisk `st.button("Odczytaj na głos")`; funkcja `get_tts_audio(caption)` wysyła POST na `http://backend:8000/tts` z danymi `{"text": caption}`; odbiera plik audio; wyświetla przez `st.audio(audio_bytes, format="audio/mp3")`. |
-| 3.8 | **Dockerfile dla FE** | Utworzyć `app/frontend/Dockerfile`: `FROM python:3.9-slim`, skopiować `requirements.txt`, `pip install -r requirements.txt`, skopiować `streamlit_app.py`, `EXPOSE 8501`, `CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]`. |
-| 3.9 | **Docker Compose** | Utworzyć plik `docker-compose.yml` w katalogu głównym z dwoma usługami: `backend` (build: `app/backend/`, ports: `8000:8000`) i `frontend` (build: `app/frontend/`, ports: `8501:8501`, `depends_on: backend`). Uruchomić: `docker compose up --build` i sprawdzić czy oba kontenery startują bez błędów. |
-| 3.10 | **README.md** | W katalogu głównym utworzyć `README.md` zawierający: nagłówek `# VisionTalk`, opis czego dotyczy aplikacja, listę technologii, instrukcję uruchomienia (`docker compose up --build`), format danych wejściowych (JPEG/PNG, max 5MB), opis endpointów API, link do modelu HuggingFace, wymagania systemowe (Docker, Docker Compose). |
-| 3.11 | **Jakość kodu i prezentacja** | Uruchomić `pylint app/frontend/`; poprawić błędy do osiągnięcia ≥ 8 pkt. Przygotować 5–7 slajdów w PowerPoint/Google Slides: tytuł, problem (osoby niedowidzące), rozwiązanie (architektura), demo (zrzuty ekranu), podsumowanie. |
+| 3.1 | **Analiza kontraktu API** | Sprawdzić działanie `/health`, `/predict` i `/tts`; spisać jakie dane wysyła frontend i jakie błędy musi obsłużyć. To jest pierwszy krok, żeby frontend nie był zgadywaniem. |
+| 3.2 | **Struktura plików UI** | Umieścić frontend w `app/backend/static/`: `index.html`, `styles.css`, `main.js`. Zwykłe HTML/CSS/JS w zupełności wystarczy. |
+| 3.3 | **UI – wybór obrazu i podgląd** | Przygotować ekran z nagłówkiem, polem wyboru pliku, podglądem obrazu i przyciskiem „Generuj opis”. Obsłużyć tylko formaty wspierane przez backend (`jpg`, `jpeg`, `png`). |
+| 3.4 | **UI – wynik i stany aplikacji** | Dodać sekcję wyniku, loader podczas oczekiwania na odpowiedź, oraz czytelne komunikaty błędów gdy backend zwróci błąd albo nie odpowie. |
+| 3.5 | **Dostępność i ergonomia** | Zastosować duży kontrast, większy rozmiar tekstu wyniku, wyraźne focus state i prosty układ pod osoby słabowidzące. To jest sensowny wkład frontendowy dla tego typu projektu. |
+| 3.6 | **Integracja z backendem** | W `main.js` wysyłać obraz jako `FormData` na endpoint `/predict`, odebrać JSON i wyrenderować `caption`. UI działa na tym samym serwerze co API, więc nie potrzeba dodatkowej warstwy pośredniej. |
+| 3.7 | **Odtwarzanie audio** | Dodać przycisk „Odczytaj opis”. Frontend wywołuje `/tts?text=...`, odbiera MP3 i odtwarza je w przeglądarce. |
+| 3.8 | **Opcjonalnie: zdjęcie z kamery** | Jeśli starczy czasu, dodać pobieranie zdjęcia z kamery przez Web API przeglądarki. To powinno być zadanie dodatkowe, nie fundament projektu. |
+| 3.9 | **Podpięcie UI do FastAPI** | Dodać w backendzie serwowanie `index.html` i plików statycznych tak, aby aplikacja była dostępna pod jednym adresem. |
+| 3.10 | **Docker Compose** | Uzupełnić `docker-compose.yml` o jeden serwis aplikacji. Sprawdzić `docker compose up --build` end-to-end. |
+| 3.11 | **README i uruchamianie** | Opisać sposób uruchomienia, port, przykładowy przebieg użycia i podział odpowiedzialności między modułem UI a API. |
+| 3.12 | **Jakość i prezentacja** | Sprawdzić frontend ręcznie w przeglądarce oraz przygotować screeny / krótkie demo pokazujące cały przepływ: upload -> opis -> audio. |
 
 ---
 
@@ -223,7 +224,7 @@ visiontalk/
 | Dokumentacja | README.md, docstringi, komentarze |
 | Czysty kod (PEP8, pylint ≥ 8) | pylint + black + nazewnictwo |
 | Automatyczna instalacja | `requirements.txt` + Docker |
-| Forma: web/API | FastAPI (API) + Streamlit (web) |
+| Forma: web/API | FastAPI (API + frontend webowy) |
 | Jakość modelu ML | Użycie sprawdzonego modelu HF + ewaluacja na `/test_images` |
 
 ---
