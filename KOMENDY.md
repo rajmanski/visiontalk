@@ -97,6 +97,22 @@ deactivate
 
 ---
 
+## 8. Backend API w Dockerze
+
+Uruchom z **katalogu głównego projektu** (`visiontalk/`):
+
+```bash
+docker build -f app/backend/Dockerfile -t visiontalk-backend .
+docker run -p 8000:8000 visiontalk-backend
+```
+
+Sprawdzenie: http://localhost:8000/health → `{"status":"ok"}`  
+Dokumentacja API: http://localhost:8000/docs
+
+Zatrzymanie kontenera: `Ctrl+C`, potem `docker ps` i `docker stop <ID>`.
+
+---
+
 ## Skrót — najczęstsze komendy
 
 | Cel | Komenda |
@@ -110,3 +126,5 @@ deactivate
 | Pylint | `pylint data/ model/ tests/` |
 | Black (formatowanie) | `black data/ model/ tests/` |
 | Wyjście z venv | `deactivate` |
+| Backend w Dockerze (build) | `docker build -f app/backend/Dockerfile -t visiontalk-backend .` |
+| Backend w Dockerze (run) | `docker run -p 8000:8000 visiontalk-backend` |
