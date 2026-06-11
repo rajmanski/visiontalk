@@ -5,7 +5,7 @@ and Google Text-to-Speech (gTTS). It exposes three endpoints:
 
 * ``GET  /health``  - simple liveness probe.
 * ``POST /predict``  - upload an image, get a textual caption back.
-* ``POST /tts``      - send text, get an MP3 audio file back.
+* ``GET  /tts``      - send text, get an MP3 audio file back.
 
 Interactive Swagger documentation is available at ``/docs`` and ReDoc at
 ``/redoc`` once the server is running.
@@ -13,7 +13,7 @@ Interactive Swagger documentation is available at ``/docs`` and ReDoc at
 
 from io import BytesIO
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from gtts import gTTS
 from PIL import Image, UnidentifiedImageError
@@ -93,29 +93,17 @@ async def predict(file: UploadFile = File(...)) -> CaptionResponse:
     return CaptionResponse(caption=caption)
 
 
-@app.post("/tts", tags=["tts"])
-def tts(text: str = Form(..., description="Text to convert to speech")):
-    """Convert text to speech and return an MP3 audio stream.
-
-    The text is synthesized in English using gTTS and streamed back with the
-    ``audio/mpeg`` content type.
-    """
+@app.get("/tts", tags=["tts"])
+def tts(text: str = Query(..., description="Text to convert to speech")):
+    """Convert text to speech and return an MP3 file."""
     if not text.strip():
         raise HTTPException(status_code=400, detail="Text must not be empty.")
 
     audio_buffer = BytesIO()
     gTTS(text=text, lang="en").write_to_fp(audio_buffer)
-    audio_bytes = audio_buffer.getvalue()
 
-    # Return the full payload (with an explicit Content-Length) instead of a
-    # chunked StreamingResponse. Browser <audio> players, including the one in
-    # Swagger UI, cannot determine the clip duration from a chunked stream and
-    # would otherwise show 00:00.
     return Response(
-        content=audio_bytes,
+        content=audio_buffer.getvalue(),
         media_type="audio/mpeg",
-        headers={
-            "Content-Disposition": 'inline; filename="speech.mp3"',
-            "Content-Length": str(len(audio_bytes)),
-        },
+        headers={"Content-Disposition": 'inline; filename="speech.mp3"'},
     )
