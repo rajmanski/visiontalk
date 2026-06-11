@@ -1,6 +1,6 @@
 # Core ML/Data dependencies (Osoba 1: s28496)
 torch>=2.0.0
-transformers>=4.30.0
+transformers>=4.30.0,<5.0.0  # 5.x usuwa pipeline "image-to-text"
 Pillow>=10.0.0
 
 # Backend dependencies (Osoba 2: s27507)
