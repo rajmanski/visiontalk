@@ -8,6 +8,7 @@ fastapi>=0.100.0
 uvicorn>=0.23.0
 gTTS>=2.3.0
 python-multipart>=0.0.6
+httpx>=0.24.0
 
 # Dev / Quality
 pytest>=7.4.0
